@@ -1,0 +1,20 @@
+{
+  "name": "Будівельний Помічник",
+  "short_name": "БудОблік",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1037/1037855.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1037/1037855.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
