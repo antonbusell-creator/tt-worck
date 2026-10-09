@@ -1,0 +1,1696 @@
+html_code = """<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Будівельний Помічник - Облік Робіт та Матеріалів</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- SheetJS (XLSX) for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Google Identity Services (GIS) & GAPI -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#f97316',
+              hover: '#ea580c',
+              dark: '#c2410c',
+            },
+            darkbg: '#18181b',
+            darkcard: '#27272a',
+            darkborder: '#3f3f46'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, [contenteditable="true"] {
+      user-select: text;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a1a1aa40;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-darkbg text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
+  <div id="root">
+    <div class="flex items-center justify-center min-h-screen">
+      <div class="text-center p-4">
+        <div class="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Завантаження Будівельного Помічника...</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    const Icons = {
+      Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
+      PlusCircle: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+      Archive: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>,
+      Settings: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
+      Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
+      Edit: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
+      Share: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>,
+      Excel: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>,
+      CheckSquare: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+      Dots: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>,
+      X: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>,
+      Moon: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>,
+      Sun: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
+      Copy: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>,
+      SMS: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>,
+      Mail: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>,
+      AlertCircle: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+      CloudSync: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+    };
+
+    const TRANSLATIONS = {
+      uk: {
+        appTitle: "Будівельний Облік",
+        extraWorks: "Додаткові роботи",
+        materialOrders: "Замовлення матеріалів",
+        addWork: "Додати додаткову роботу",
+        addOrder: "Замовити матеріал",
+        archive: "Архів",
+        settings: "Налаштування",
+        projectName: "Назва проекту / об'єкта",
+        workDescription: "Опис виконаної роботи",
+        materialsUsed: "Використані матеріали",
+        materialsList: "Список матеріалів",
+        materialDesc: "Опис матеріалу",
+        qty: "Кількість",
+        unit: "Од. вим.",
+        addMaterial: "Додати матеріал",
+        date: "Дата проведення робіт",
+        orderDate: "Дата замовлення",
+        hoursSpent: "Затрачений час (год)",
+        peopleCount: "Кількість людей",
+        manHours: "Разом людино-годин",
+        save: "Зберегти",
+        cancel: "Скасувати",
+        edit: "Редагувати",
+        share: "Поширити",
+        toArchive: "В архів",
+        fromArchive: "Розархівувати",
+        excel: "Ексель",
+        delete: "Видалити",
+        status: "Статус",
+        urgent: "ТЕРМІНОВО",
+        isUrgent: "Помітити як терміново",
+        received: "Отримано",
+        inProgress: "В процесі",
+        completed: "Виконано",
+        newOrder: "Нова",
+        selectAll: "Виділити все",
+        selected: "Виділено",
+        confirmDelete: "Ви впевнені, що хочете видалити обраний запис?",
+        confirmBulkDelete: "Ви впевнені, що хочете видалити всі виділені записи?",
+        theme: "Тема оформлення",
+        darkTheme: "Темна",
+        lightTheme: "Світла",
+        language: "Мова додатка",
+        userAccount: "Google Drive API Налаштування",
+        loginGoogle: "Увійти через Google Drive",
+        loggedAs: "Підключено",
+        logout: "Відключити",
+        googleDriveConnected: "Google Диск підключено (Автосинхронізація)",
+        copyText: "Скопіювати текст",
+        copied: "Скопійовано!",
+        sendSMS: "SMS",
+        sendEmail: "Email",
+        previewTitle: "Попередній перегляд та редагування",
+        translationTarget: "Перекласти весь текст на",
+        emptyList: "Список порожній",
+        noMaterials: "Матеріали не вказані",
+        translating: "Перекладаємо через GoogleTranslate...",
+        syncNow: "Синхронізувати зараз"
+      }
+    };
+
+    function App() {
+      const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
+      const [lang, setLang] = useState(() => localStorage.getItem('app_lang') || 'uk');
+      const [activeTab, setActiveTab] = useState('works');
+      const [showSettings, setShowSettings] = useState(false);
+      const [showArchive, setShowArchive] = useState(false);
+      
+      const [clientId, setClientId] = useState(() => localStorage.getItem('app_google_client_id') || '');
+      const [accessToken, setAccessToken] = useState(() => localStorage.getItem('app_google_token') || null);
+      const [syncStatus, setSyncStatus] = useState('');
+
+      const [works, setWorks] = useState(() => JSON.parse(localStorage.getItem('app_works_v4')) || []);
+      const [orders, setOrders] = useState(() => JSON.parse(localStorage.getItem('app_orders_v4')) || []);
+
+      const [selectedWorkIds, setSelectedWorkIds] = useState([]);
+      const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+
+      const [workModal, setWorkModal] = useState({ open: false, item: null });
+      const [orderModal, setOrderModal] = useState({ open: false, item: null });
+      const [statusModal, setStatusModal] = useState({ open: false, order: null });
+      const [shareModal, setShareModal] = useState({ open: false, items: [], type: 'works' });
+
+      const t = TRANSLATIONS[lang] || TRANSLATIONS.uk;
+
+      useEffect(() => {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('app_theme', theme);
+      }, [theme]);
+
+      useEffect(() => {
+        localStorage.setItem('app_works_v4', JSON.stringify(works));
+      }, [works]);
+
+      useEffect(() => {
+        localStorage.setItem('app_orders_v4', JSON.stringify(orders));
+      }, [orders]);
+
+      useEffect(() => {
+        localStorage.setItem('app_lang', lang);
+      }, [lang]);
+
+      useEffect(() => {
+        localStorage.setItem('app_google_client_id', clientId);
+      }, [clientId]);
+
+      // Функція авторизації через Google Identity Services (GIS)
+      const handleGoogleLogin = () => {
+        if (!clientId.trim()) {
+          alert('Будь ласка, спочатку вкажіть ваш Google OAuth Client ID у Налаштуваннях!');
+          setShowSettings(true);
+          return;
+        }
+
+        if (typeof google === 'undefined' || !google.accounts) {
+          alert('Скрипт Google Identity Services ще не завантажився. Перевірте з\'єднання з інтернетом.');
+          return;
+        }
+
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId.trim(),
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: (response) => {
+            if (response.access_token) {
+              setAccessToken(response.access_token);
+              localStorage.setItem('app_google_token', response.access_token);
+              setSyncStatus('Успішно авторизовано');
+              syncToGoogleDrive(response.access_token);
+            } else {
+              setSyncStatus('Помилка авторизації');
+            }
+          },
+        });
+        client.requestAccessToken();
+      };
+
+      const handleGoogleLogout = () => {
+        setAccessToken(null);
+        localStorage.removeItem('app_google_token');
+        setSyncStatus('');
+      };
+
+      // Синхронізація даних на Google Диск
+      const syncToGoogleDrive = async (token = accessToken) => {
+        if (!token) return;
+        setSyncStatus('Синхронізація...');
+
+        const backupData = {
+          works,
+          orders,
+          updatedAt: new Date().toISOString()
+        };
+
+        try {
+          // Шукаємо файл резервної копії на Диску
+          const searchRes = await fetch("https://www.googleapis.com/drive/v3/files?q=name='construction_backup.json'+and+trashed=false", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const searchData = await searchRes.json();
+          const existingFile = searchData.files && searchData.files[0];
+
+          const fileContent = JSON.stringify(backupData, null, 2);
+          
+          if (existingFile) {
+            // Оновлюємо існуючий файл
+            await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: fileContent
+            });
+          } else {
+            // Створюємо новий файл
+            const metadata = {
+              name: 'construction_backup.json',
+              mimeType: 'application/json'
+            };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', new Blob([fileContent], { type: 'application/json' }));
+
+            await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: form
+            });
+          }
+          setSyncStatus(`Збережено о ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+        } catch (err) {
+          console.error(err);
+          setSyncStatus('Помилка збереження на Диск');
+        }
+      };
+
+      const activeWorks = useMemo(() => works.filter(w => w.isArchived === showArchive), [works, showArchive]);
+      const activeOrders = useMemo(() => orders.filter(o => o.isArchived === showArchive), [orders, showArchive]);
+
+      useEffect(() => {
+        setSelectedWorkIds([]);
+        setSelectedOrderIds([]);
+      }, [activeTab, showArchive]);
+
+      const handleSaveWork = (formData) => {
+        if (formData.id) {
+          setWorks(works.map(w => w.id === formData.id ? { ...formData, updatedAt: new Date().toISOString() } : w));
+        } else {
+          const newWork = {
+            ...formData,
+            id: Date.now().toString(),
+            isArchived: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setWorks([newWork, ...works]);
+        }
+        setWorkModal({ open: false, item: null });
+      };
+
+      const handleDeleteWork = (id) => {
+        if (confirm(t.confirmDelete)) {
+          setWorks(works.filter(w => w.id !== id));
+          setSelectedWorkIds(selectedWorkIds.filter(i => i !== id));
+        }
+      };
+
+      const handleToggleArchiveWork = (id) => {
+        setWorks(works.map(w => w.id === id ? { ...w, isArchived: !w.isArchived } : w));
+      };
+
+      const handleSelectAllWorks = (e) => {
+        setSelectedWorkIds(e.target.checked ? activeWorks.map(w => w.id) : []);
+      };
+
+      const handleBulkArchiveWorks = () => {
+        setWorks(works.map(w => selectedWorkIds.includes(w.id) ? { ...w, isArchived: !showArchive } : w));
+        setSelectedWorkIds([]);
+      };
+
+      const handleBulkDeleteWorks = () => {
+        if (confirm(t.confirmBulkDelete)) {
+          setWorks(works.filter(w => !selectedWorkIds.includes(w.id)));
+          setSelectedWorkIds([]);
+        }
+      };
+
+      const handleSaveOrder = (formData) => {
+        if (formData.id) {
+          setOrders(orders.map(o => o.id === formData.id ? { ...formData, updatedAt: new Date().toISOString() } : o));
+        } else {
+          const newOrder = {
+            ...formData,
+            id: Date.now().toString(),
+            isArchived: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          setOrders([newOrder, ...orders]);
+        }
+        setOrderModal({ open: false, item: null });
+      };
+
+      const handleDeleteOrder = (id) => {
+        if (confirm(t.confirmDelete)) {
+          setOrders(orders.filter(o => o.id !== id));
+          setSelectedOrderIds(selectedOrderIds.filter(i => i !== id));
+        }
+      };
+
+      const handleToggleArchiveOrder = (id) => {
+        setOrders(orders.map(o => o.id === id ? { ...o, isArchived: !o.isArchived } : o));
+      };
+
+      const handleSaveOrderStatus = (orderId, updatedMaterials) => {
+        setOrders(orders.map(o => {
+          if (o.id === orderId) {
+            const allReceived = updatedMaterials.length > 0 && updatedMaterials.every(m => m.received);
+            const someReceived = updatedMaterials.some(m => m.received);
+            let status = 'new';
+            if (allReceived) status = 'completed';
+            else if (someReceived) status = 'in_progress';
+
+            return {
+              ...o,
+              materials: updatedMaterials,
+              status,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return o;
+        }));
+        setStatusModal({ open: false, order: null });
+      };
+
+      const handleSelectAllOrders = (e) => {
+        setSelectedOrderIds(e.target.checked ? activeOrders.map(o => o.id) : []);
+      };
+
+      const handleBulkArchiveOrders = () => {
+        setOrders(orders.map(o => selectedOrderIds.includes(o.id) ? { ...o, isArchived: !showArchive } : o));
+        setSelectedOrderIds([]);
+      };
+
+      const handleBulkDeleteOrders = () => {
+        if (confirm(t.confirmBulkDelete)) {
+          setOrders(orders.filter(o => !selectedOrderIds.includes(o.id)));
+          setSelectedOrderIds([]);
+        }
+      };
+
+      const handleExportExcel = (items, type) => {
+        const dataToExport = [];
+
+        if (type === 'works') {
+          items.forEach(w => {
+            if (w.materials && w.materials.length > 0) {
+              w.materials.forEach(m => {
+                dataToExport.push({
+                  'Проект': w.projectName,
+                  'Дата': w.date,
+                  'Опис робіт': w.description,
+                  'Час (год)': w.hoursSpent,
+                  'Людей': w.peopleCount,
+                  'Людино-години': w.totalManHours,
+                  'Матеріал': m.description,
+                  'Кількість': m.quantity,
+                  'Од. вим.': m.unit
+                });
+              });
+            } else {
+              dataToExport.push({
+                'Проект': w.projectName,
+                'Дата': w.date,
+                'Опис робіт': w.description,
+                'Час (год)': w.hoursSpent,
+                'Людей': w.peopleCount,
+                'Людино-години': w.totalManHours,
+                'Матеріал': '-',
+                'Кількість': '-',
+                'Од. вим.': '-'
+              });
+            }
+          });
+        } else {
+          items.forEach(o => {
+            const statusText = o.status === 'completed' ? 'Виконано' : o.status === 'in_progress' ? 'В процесі' : 'Нова';
+            if (o.materials && o.materials.length > 0) {
+              o.materials.forEach(m => {
+                dataToExport.push({
+                  'Проект': o.projectName,
+                  'Дата': o.date,
+                  'Терміново': o.isUrgent ? 'ТАК' : 'Ні',
+                  'Статус': statusText,
+                  'Матеріал': m.description,
+                  'Кількість': m.quantity,
+                  'Од. вим.': m.unit,
+                  'Отримано': m.received ? 'ТАК' : 'Ні'
+                });
+              });
+            } else {
+              dataToExport.push({
+                'Проект': o.projectName,
+                'Дата': o.date,
+                'Терміново': o.isUrgent ? 'ТАК' : 'Ні',
+                'Статус': statusText,
+                'Матеріал': '-',
+                'Кількість': '-',
+                'Од. вим.': '-',
+                'Отримано': '-'
+              });
+            }
+          });
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, type === 'works' ? "Додаткові роботи" : "Замовлення матеріалів");
+        XLSX.writeFile(workbook, `${type === 'works' ? 'works' : 'orders'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+      };
+
+      return (
+        <div className="max-w-md mx-auto pb-20 min-h-screen flex flex-col">
+          <header className="bg-white dark:bg-darkcard border-b border-gray-200 dark:border-darkborder sticky top-0 z-30 px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold text-lg shadow-sm">
+                  Б
+                </div>
+                <div>
+                  <h1 className="font-bold text-base leading-tight">{t.appTitle}</h1>
+                  {accessToken && (
+                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 cursor-pointer" onClick={() => syncToGoogleDrive()}>
+                      ● {syncStatus || 'Google Drive Active'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setShowArchive(!showArchive)}
+                  className={`p-2 rounded-lg border text-xs font-medium flex items-center gap-1 transition-colors ${
+                    showArchive 
+                      ? 'bg-amber-500/10 border-amber-500 text-amber-500' 
+                      : 'border-gray-200 dark:border-darkborder hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                  title={t.archive}
+                >
+                  <Icons.Archive />
+                  {showArchive && <span className="text-[11px]">{t.archive}</span>}
+                </button>
+
+                <button 
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 rounded-lg border border-gray-200 dark:border-darkborder hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title={t.settings}
+                >
+                  <Icons.Settings />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex bg-gray-100 dark:bg-darkbg p-1 rounded-xl mt-3">
+              <button
+                onClick={() => setActiveTab('works')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === 'works' 
+                    ? 'bg-white dark:bg-darkcard text-brand shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                {t.extraWorks}
+              </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === 'orders' 
+                    ? 'bg-white dark:bg-darkcard text-brand shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                {t.materialOrders}
+              </button>
+            </div>
+          </header>
+
+          {showArchive && (
+            <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-xs text-amber-500 font-medium flex justify-between items-center">
+              <span>Режим архіву заявок</span>
+              <button onClick={() => setShowArchive(false)} className="underline font-bold">Вийти з архіву</button>
+            </div>
+          )}
+
+          <main className="p-4 flex-1">
+            {activeTab === 'works' ? (
+              <div>
+                {!showArchive && (
+                  <button
+                    onClick={() => setWorkModal({ open: true, item: null })}
+                    className="w-full bg-brand hover:bg-brand-hover text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-brand/20 flex items-center justify-center gap-2 mb-4 transition-transform active:scale-[0.99]"
+                  >
+                    <Icons.PlusCircle />
+                    <span>{t.addWork}</span>
+                  </button>
+                )}
+
+                {activeWorks.length > 0 && (
+                  <div className="flex items-center justify-between bg-white dark:bg-darkcard p-3 rounded-xl border border-gray-200 dark:border-darkborder mb-3 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedWorkIds.length === activeWorks.length && activeWorks.length > 0}
+                        onChange={handleSelectAllWorks}
+                        className="w-4 h-4 rounded text-brand focus:ring-brand accent-brand"
+                      />
+                      <span>{t.selectAll} ({selectedWorkIds.length})</span>
+                    </label>
+
+                    {selectedWorkIds.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => setShareModal({ open: true, items: activeWorks.filter(w => selectedWorkIds.includes(w.id)), type: 'works' })}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-brand"
+                          title={t.share}
+                        >
+                          <Icons.Share />
+                        </button>
+                        <button 
+                          onClick={() => handleExportExcel(activeWorks.filter(w => selectedWorkIds.includes(w.id)), 'works')}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-green-600"
+                          title={t.excel}
+                        >
+                          <Icons.Excel />
+                        </button>
+                        <button 
+                          onClick={handleBulkArchiveWorks}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-amber-500"
+                          title={showArchive ? t.fromArchive : t.toArchive}
+                        >
+                          <Icons.Archive />
+                        </button>
+                        <button 
+                          onClick={handleBulkDeleteWorks}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500"
+                          title={t.delete}
+                        >
+                          <Icons.Trash />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeWorks.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">
+                    <p>{t.emptyList}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {activeWorks.map(work => (
+                      <WorkCard 
+                        key={work.id} 
+                        work={work}
+                        isSelected={selectedWorkIds.includes(work.id)}
+                        onSelect={(id) => setSelectedWorkIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
+                        onEdit={() => setWorkModal({ open: true, item: work })}
+                        onShare={() => setShareModal({ open: true, items: [work], type: 'works' })}
+                        onArchive={() => handleToggleArchiveWork(work.id)}
+                        onExcel={() => handleExportExcel([work], 'works')}
+                        onDelete={() => handleDeleteWork(work.id)}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {!showArchive && (
+                  <button
+                    onClick={() => setOrderModal({ open: true, item: null })}
+                    className="w-full bg-brand hover:bg-brand-hover text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-brand/20 flex items-center justify-center gap-2 mb-4 transition-transform active:scale-[0.99]"
+                  >
+                    <Icons.PlusCircle />
+                    <span>{t.addOrder}</span>
+                  </button>
+                )}
+
+                {activeOrders.length > 0 && (
+                  <div className="flex items-center justify-between bg-white dark:bg-darkcard p-3 rounded-xl border border-gray-200 dark:border-darkborder mb-3 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer font-medium">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedOrderIds.length === activeOrders.length && activeOrders.length > 0}
+                        onChange={handleSelectAllOrders}
+                        className="w-4 h-4 rounded text-brand focus:ring-brand accent-brand"
+                      />
+                      <span>{t.selectAll} ({selectedOrderIds.length})</span>
+                    </label>
+
+                    {selectedOrderIds.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => setShareModal({ open: true, items: activeOrders.filter(o => selectedOrderIds.includes(o.id)), type: 'orders' })}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-brand"
+                          title={t.share}
+                        >
+                          <Icons.Share />
+                        </button>
+                        <button 
+                          onClick={() => handleExportExcel(activeOrders.filter(o => selectedOrderIds.includes(o.id)), 'orders')}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-green-600"
+                          title={t.excel}
+                        >
+                          <Icons.Excel />
+                        </button>
+                        <button 
+                          onClick={handleBulkArchiveOrders}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-amber-500"
+                          title={showArchive ? t.fromArchive : t.toArchive}
+                        >
+                          <Icons.Archive />
+                        </button>
+                        <button 
+                          onClick={handleBulkDeleteOrders}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500"
+                          title={t.delete}
+                        >
+                          <Icons.Trash />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeOrders.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">
+                    <p>{t.emptyList}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {activeOrders.map(order => (
+                      <OrderCard 
+                        key={order.id} 
+                        order={order}
+                        isSelected={selectedOrderIds.includes(order.id)}
+                        onSelect={(id) => setSelectedOrderIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
+                        onStatus={() => setStatusModal({ open: true, order })}
+                        onEdit={() => setOrderModal({ open: true, item: order })}
+                        onShare={() => setShareModal({ open: true, items: [order], type: 'orders' })}
+                        onArchive={() => handleToggleArchiveOrder(order.id)}
+                        onExcel={() => handleExportExcel([order], 'orders')}
+                        onDelete={() => handleDeleteOrder(order.id)}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+
+          {showSettings && (
+            <SettingsModal 
+              clientId={clientId}
+              setClientId={setClientId}
+              accessToken={accessToken}
+              syncStatus={syncStatus}
+              theme={theme}
+              setTheme={setTheme}
+              lang={lang}
+              setLang={setLang}
+              onGoogleLogin={handleGoogleLogin}
+              onGoogleLogout={handleGoogleLogout}
+              onSyncNow={() => syncToGoogleDrive()}
+              onClose={() => setShowSettings(false)}
+              t={t}
+            />
+          )}
+
+          {workModal.open && (
+            <WorkFormModal 
+              item={workModal.item}
+              onSave={handleSaveWork}
+              onClose={() => setWorkModal({ open: false, item: null })}
+              t={t}
+            />
+          )}
+
+          {orderModal.open && (
+            <OrderFormModal 
+              item={orderModal.item}
+              onSave={handleSaveOrder}
+              onClose={() => setOrderModal({ open: false, item: null })}
+              t={t}
+            />
+          )}
+
+          {statusModal.open && (
+            <OrderStatusModal 
+              order={statusModal.order}
+              onSave={handleSaveOrderStatus}
+              onClose={() => setStatusModal({ open: false, order: null })}
+              t={t}
+            />
+          )}
+
+          {shareModal.open && (
+            <ShareModal 
+              items={shareModal.items}
+              type={shareModal.type}
+              appLang={lang}
+              onClose={() => setShareModal({ open: false, items: [], type: 'works' })}
+              t={t}
+            />
+          )}
+        </div>
+      );
+    }
+
+    function WorkCard({ work, isSelected, onSelect, onEdit, onShare, onArchive, onExcel, onDelete, t }) {
+      const [menuOpen, setMenuOpen] = useState(false);
+
+      return (
+        <div className={`bg-white dark:bg-darkcard rounded-xl p-3.5 border transition-all relative ${
+          isSelected ? 'border-brand shadow-sm' : 'border-gray-200 dark:border-darkborder'
+        }`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2.5">
+              <input 
+                type="checkbox" 
+                checked={isSelected}
+                onChange={() => onSelect(work.id)}
+                className="mt-1 w-4 h-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
+              />
+              <div>
+                <h3 className="font-bold text-sm leading-snug">{work.projectName}</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{work.date} • {work.totalManHours} людин.-год</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{work.description}</p>
+                {work.materials && work.materials.length > 0 && (
+                  <div className="mt-2 text-[11px] text-gray-500 bg-gray-50 dark:bg-darkbg p-1.5 rounded-lg border border-gray-100 dark:border-darkborder">
+                    <span className="font-semibold">{t.materialsUsed}:</span> {work.materials.map(m => `${m.description} (${m.quantity} ${m.unit})`).join(', ')}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="relative">
+              <button 
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+              >
+                <Icons.Dots />
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)}></div>
+                  <div className="absolute right-0 top-7 z-20 w-40 bg-white dark:bg-darkcard rounded-xl shadow-xl border border-gray-200 dark:border-darkborder py-1 text-xs">
+                    <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                      <Icons.Edit /> {t.edit}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onShare(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-brand">
+                      <Icons.Share /> {t.share}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onArchive(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-amber-500">
+                      <Icons.Archive /> {work.isArchived ? t.fromArchive : t.toArchive}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onExcel(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-green-600">
+                      <Icons.Excel /> {t.excel}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-red-500">
+                      <Icons.Trash /> {t.delete}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function OrderCard({ order, isSelected, onSelect, onStatus, onEdit, onShare, onArchive, onExcel, onDelete, t }) {
+      const [menuOpen, setMenuOpen] = useState(false);
+
+      let statusBg = 'border-gray-200 dark:border-darkborder';
+      let badgeBg = 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300';
+      let statusText = t.newOrder;
+
+      if (order.status === 'in_progress') {
+        statusBg = 'border-amber-400 dark:border-amber-500/50 bg-amber-500/5';
+        badgeBg = 'bg-amber-500/20 text-amber-600 dark:text-amber-400';
+        statusText = t.inProgress;
+      } else if (order.status === 'completed') {
+        statusBg = 'border-green-500 dark:border-green-500/50 bg-green-500/5';
+        badgeBg = 'bg-green-500/20 text-green-600 dark:text-green-400';
+        statusText = t.completed;
+      }
+
+      return (
+        <div className={`bg-white dark:bg-darkcard rounded-xl p-3.5 border transition-all relative ${statusBg} ${
+          isSelected ? 'ring-2 ring-brand' : ''
+        }`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2.5">
+              <input 
+                type="checkbox" 
+                checked={isSelected}
+                onChange={() => onSelect(order.id)}
+                className="mt-1 w-4 h-4 rounded text-brand focus:ring-brand accent-brand cursor-pointer"
+              />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-sm leading-snug">{order.projectName}</h3>
+                  {order.isUrgent && (
+                    <span className="px-1.5 py-0.5 bg-red-500 text-white font-bold text-[10px] rounded uppercase tracking-wider">
+                      {t.urgent}
+                    </span>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500">{order.date}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeBg}`}>
+                    {statusText}
+                  </span>
+                </div>
+
+                {order.materials && order.materials.length > 0 && (
+                  <div className="mt-2 text-[11px] text-gray-500 bg-gray-50 dark:bg-darkbg p-1.5 rounded-lg border border-gray-100 dark:border-darkborder space-y-0.5">
+                    {order.materials.map((m, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <span className={m.received ? "line-through text-green-600 dark:text-green-400" : ""}>
+                          • {m.description}
+                        </span>
+                        <span className="font-medium">{m.quantity} {m.unit}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="relative">
+              <button 
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+              >
+                <Icons.Dots />
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)}></div>
+                  <div className="absolute right-0 top-7 z-20 w-40 bg-white dark:bg-darkcard rounded-xl shadow-xl border border-gray-200 dark:border-darkborder py-1 text-xs">
+                    <button onClick={() => { setMenuOpen(false); onStatus(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 font-bold text-brand">
+                      <Icons.CheckSquare /> {t.status}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                      <Icons.Edit /> {t.edit}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onShare(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-brand">
+                      <Icons.Share /> {t.share}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onArchive(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-amber-500">
+                      <Icons.Archive /> {order.isArchived ? t.fromArchive : t.toArchive}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onExcel(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-green-600">
+                      <Icons.Excel /> {t.excel}
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 text-red-500">
+                      <Icons.Trash /> {t.delete}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function WorkFormModal({ item, onSave, onClose, t }) {
+      const [projectName, setProjectName] = useState(item?.projectName || '');
+      const [description, setDescription] = useState(item?.description || '');
+      const [date, setDate] = useState(item?.date || new Date().toISOString().slice(0,10));
+      const [hoursSpent, setHoursSpent] = useState(item?.hoursSpent || 1);
+      const [peopleCount, setPeopleCount] = useState(item?.peopleCount || 1);
+      const [materials, setMaterials] = useState(item?.materials || [{ description: '', quantity: 1, unit: 'шт' }]);
+
+      const totalManHours = useMemo(() => (Number(hoursSpent) || 0) * (Number(peopleCount) || 0), [hoursSpent, peopleCount]);
+
+      const handleAddMaterial = () => {
+        setMaterials([...materials, { description: '', quantity: 1, unit: 'шт' }]);
+      };
+
+      const handleRemoveMaterial = (index) => {
+        setMaterials(materials.filter((_, i) => i !== index));
+      };
+
+      const handleMaterialChange = (index, field, value) => {
+        setMaterials(materials.map((m, i) => i === index ? { ...m, [field]: value } : m));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({
+          id: item?.id,
+          projectName,
+          description,
+          date,
+          hoursSpent: Number(hoursSpent),
+          peopleCount: Number(peopleCount),
+          totalManHours,
+          materials: materials.filter(m => m.description.trim() !== '')
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-darkcard w-full max-w-md max-h-[90vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder">
+            <div className="p-4 border-b border-gray-200 dark:border-darkborder flex justify-between items-center">
+              <h2 className="font-bold text-base">{item ? t.edit : t.addWork}</h2>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Icons.X />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
+              <div>
+                <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.projectName}</label>
+                <input 
+                  type="text" 
+                  required
+                  value={projectName} 
+                  onChange={e => setProjectName(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent focus:ring-2 focus:ring-brand outline-none"
+                  placeholder="напр. Об'єкт вул. Садова 15"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.workDescription}</label>
+                <textarea 
+                  required
+                  rows="3"
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent focus:ring-2 focus:ring-brand outline-none"
+                  placeholder="Опишіть виконані додаткові роботи..."
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="font-medium text-gray-700 dark:text-gray-300">{t.materialsUsed}</label>
+                  <button 
+                    type="button" 
+                    onClick={handleAddMaterial}
+                    className="text-brand font-bold flex items-center gap-1 text-xs"
+                  >
+                    <Icons.Plus /> {t.addMaterial}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {materials.map((mat, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input 
+                        type="text" 
+                        placeholder={t.materialDesc}
+                        value={mat.description}
+                        onChange={e => handleMaterialChange(index, 'description', e.target.value)}
+                        className="flex-1 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <input 
+                        type="number" 
+                        step="any"
+                        placeholder={t.qty}
+                        value={mat.quantity}
+                        onChange={e => handleMaterialChange(index, 'quantity', e.target.value)}
+                        className="w-16 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent text-center outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder={t.unit}
+                        value={mat.unit}
+                        onChange={e => handleMaterialChange(index, 'unit', e.target.value)}
+                        className="w-16 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent text-center outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      {materials.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveMaterial(index)}
+                          className="p-1 text-red-500 hover:bg-red-500/10 rounded"
+                        >
+                          <Icons.Trash />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-200 dark:border-darkborder">
+                <div>
+                  <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.date}</label>
+                  <input 
+                    type="date" 
+                    required
+                    value={date} 
+                    onChange={e => setDate(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.hoursSpent}</label>
+                  <input 
+                    type="number" 
+                    step="0.5"
+                    min="0"
+                    required
+                    value={hoursSpent} 
+                    onChange={e => setHoursSpent(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.peopleCount}</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    required
+                    value={peopleCount} 
+                    onChange={e => setPeopleCount(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+
+                <div className="bg-brand/10 p-2.5 rounded-xl border border-brand/20 text-center">
+                  <span className="block text-[10px] text-gray-500 font-medium">{t.manHours}</span>
+                  <span className="text-base font-bold text-brand">{totalManHours} год</span>
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-2">
+                <button 
+                  type="button" 
+                  onClick={onClose}
+                  className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-darkborder font-bold hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold shadow-lg shadow-brand/20"
+                >
+                  {t.save}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function OrderFormModal({ item, onSave, onClose, t }) {
+      const [projectName, setProjectName] = useState(item?.projectName || '');
+      const [date, setDate] = useState(item?.date || new Date().toISOString().slice(0,10));
+      const [isUrgent, setIsUrgent] = useState(item?.isUrgent || false);
+      const [materials, setMaterials] = useState(item?.materials || [{ description: '', quantity: 1, unit: 'шт', received: false }]);
+
+      const handleAddMaterial = () => {
+        setMaterials([...materials, { description: '', quantity: 1, unit: 'шт', received: false }]);
+      };
+
+      const handleRemoveMaterial = (index) => {
+        setMaterials(materials.filter((_, i) => i !== index));
+      };
+
+      const handleMaterialChange = (index, field, value) => {
+        setMaterials(materials.map((m, i) => i === index ? { ...m, [field]: value } : m));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave({
+          id: item?.id,
+          projectName,
+          date,
+          isUrgent,
+          status: item?.status || 'new',
+          materials: materials.filter(m => m.description.trim() !== '')
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-darkcard w-full max-w-md max-h-[90vh] rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder">
+            <div className="p-4 border-b border-gray-200 dark:border-darkborder flex justify-between items-center">
+              <h2 className="font-bold text-base">{item ? t.edit : t.addOrder}</h2>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Icons.X />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
+              <div>
+                <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.projectName}</label>
+                <input 
+                  type="text" 
+                  required
+                  value={projectName} 
+                  onChange={e => setProjectName(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent focus:ring-2 focus:ring-brand outline-none"
+                  placeholder="напр. Об'єкт вул. Садова 15"
+                />
+              </div>
+
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-darkbg p-3 rounded-xl border border-gray-200 dark:border-darkborder">
+                <span className="font-bold text-red-500 flex items-center gap-1.5">
+                  <Icons.AlertCircle />
+                  {t.isUrgent}
+                </span>
+                <input 
+                  type="checkbox" 
+                  checked={isUrgent}
+                  onChange={e => setIsUrgent(e.target.checked)}
+                  className="w-5 h-5 rounded text-red-500 focus:ring-red-500 accent-red-500 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">{t.orderDate}</label>
+                <input 
+                  type="date" 
+                  required
+                  value={date} 
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="font-medium text-gray-700 dark:text-gray-300">{t.materialsList}</label>
+                  <button 
+                    type="button" 
+                    onClick={handleAddMaterial}
+                    className="text-brand font-bold flex items-center gap-1 text-xs"
+                  >
+                    <Icons.Plus /> {t.addMaterial}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {materials.map((mat, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input 
+                        type="text" 
+                        placeholder={t.materialDesc}
+                        value={mat.description}
+                        onChange={e => handleMaterialChange(index, 'description', e.target.value)}
+                        className="flex-1 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <input 
+                        type="number" 
+                        step="any"
+                        placeholder={t.qty}
+                        value={mat.quantity}
+                        onChange={e => handleMaterialChange(index, 'quantity', e.target.value)}
+                        className="w-16 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent text-center outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder={t.unit}
+                        value={mat.unit}
+                        onChange={e => handleMaterialChange(index, 'unit', e.target.value)}
+                        className="w-16 p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-transparent text-center outline-none focus:ring-1 focus:ring-brand"
+                      />
+                      {materials.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveMaterial(index)}
+                          className="p-1 text-red-500 hover:bg-red-500/10 rounded"
+                        >
+                          <Icons.Trash />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-2">
+                <button 
+                  type="button" 
+                  onClick={onClose}
+                  className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-darkborder font-bold hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  {t.cancel}
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold shadow-lg shadow-brand/20"
+                >
+                  {t.save}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function OrderStatusModal({ order, onSave, onClose, t }) {
+      const [materials, setMaterials] = useState(order?.materials || []);
+
+      const handleToggleReceived = (index) => {
+        setMaterials(materials.map((m, i) => i === index ? { ...m, received: !m.received } : m));
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-darkcard w-full max-w-md rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder">
+            <div className="p-4 border-b border-gray-200 dark:border-darkborder flex justify-between items-center">
+              <div>
+                <h2 className="font-bold text-base">{t.status}</h2>
+                <p className="text-xs text-gray-500">{order.projectName}</p>
+              </div>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 text-xs max-h-[60vh] overflow-y-auto">
+              <p className="text-gray-500 font-medium">Відмітьте матеріали, які вже доставлено на об'єкт:</p>
+              
+              <div className="space-y-2">
+                {materials.map((mat, index) => (
+                  <label 
+                    key={index} 
+                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${
+                      mat.received 
+                        ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400' 
+                        : 'bg-gray-50 dark:bg-darkbg border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="checkbox" 
+                        checked={mat.received || false}
+                        onChange={() => handleToggleReceived(index)}
+                        className="w-5 h-5 rounded text-green-600 focus:ring-green-500 accent-green-600"
+                      />
+                      <span className="font-bold">{mat.description}</span>
+                    </div>
+                    <span className="font-medium text-gray-500">{mat.quantity} {mat.unit}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-darkborder flex gap-2">
+              <button 
+                onClick={onClose}
+                className="flex-1 py-3 rounded-xl border border-gray-300 dark:border-darkborder font-bold hover:bg-gray-100 dark:hover:bg-gray-800 text-xs"
+              >
+                {t.cancel}
+              </button>
+              <button 
+                onClick={() => onSave(order.id, materials)}
+                className="flex-1 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold shadow-lg shadow-brand/20 text-xs"
+              >
+                {t.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ShareModal({ items, type, appLang, onClose, t }) {
+      const [targetLang, setTargetLang] = useState('uk');
+      const [editedText, setEditedText] = useState('');
+      const [copied, setCopied] = useState(false);
+      const [isTranslating, setIsTranslating] = useState(false);
+
+      const generateBaseText = useCallback(() => {
+        let lines = [];
+
+        items.forEach((item, idx) => {
+          if (type === 'works') {
+            lines.push(`=== ЗВІТ ПРО ДОДАТКОВІ РОБОТИ ${items.length > 1 ? `#${idx + 1}` : ''} ===`);
+            lines.push(`Проект: ${item.projectName}`);
+            lines.push(`Дата: ${item.date}`);
+            lines.push(`Опис робіт: ${item.description}`);
+            lines.push(`Трудовитрати: ${item.hoursSpent} год x ${item.peopleCount} осіб = ${item.totalManHours} людино-годин`);
+            
+            lines.push(`Використані матеріали:`);
+            if (item.materials && item.materials.length > 0) {
+              item.materials.forEach(m => {
+                lines.push(`- ${m.description}: ${m.quantity} ${m.unit}`);
+              });
+            } else {
+              lines.push(`- Матеріали не вказані`);
+            }
+          } else {
+            lines.push(`=== ЗВІТ ПРО ЗАМОВЛЕННЯ МАТЕРІАЛІВ ${items.length > 1 ? `#${idx + 1}` : ''} ===`);
+            lines.push(`Проект: ${item.projectName} ${item.isUrgent ? '[ТЕРМІНОВО]' : ''}`);
+            lines.push(`Дата: ${item.date}`);
+            
+            let statusText = 'НОВЕ ЗАМОВЛЕННЯ';
+            if (item.status === 'completed') statusText = 'ВИКОНАНО';
+            else if (item.status === 'in_progress') statusText = 'В ПРОЦЕСІ';
+            
+            lines.push(`Статус: ${statusText}`);
+
+            const received = (item.materials || []).filter(m => m.received);
+            const pending = (item.materials || []).filter(m => !m.received);
+
+            if (item.status === 'in_progress' || item.status === 'completed') {
+              if (received.length > 0) {
+                lines.push(`Отримані позиції:`);
+                received.forEach(m => lines.push(`  + ${m.description}: ${m.quantity} ${m.unit}`));
+              }
+              if (pending.length > 0) {
+                lines.push(`Очікуються позиції:`);
+                pending.forEach(m => lines.push(`  - ${m.description}: ${m.quantity} ${m.unit}`));
+              }
+            } else {
+              lines.push(`Список матеріалів:`);
+              (item.materials || []).forEach(m => {
+                lines.push(`- ${m.description}: ${m.quantity} ${m.unit}`);
+              });
+            }
+          }
+          lines.push('');
+        });
+
+        return lines.join('\n').trim();
+      }, [items, type]);
+
+      const translateTextOnline = async (text, targetLangCode) => {
+        if (targetLangCode === 'uk') return text;
+        setIsTranslating(true);
+        try {
+          const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLangCode}&dt=t&q=${encodeURIComponent(text)}`);
+          const data = await res.json();
+          if (data && data[0]) {
+            const translated = data[0].map(item => item[0]).join('');
+            setIsTranslating(false);
+            return translated;
+          }
+        } catch (error) {
+          console.error('Помилка Google Translate API:', error);
+        }
+        setIsTranslating(false);
+        return text;
+      };
+
+      useEffect(() => {
+        const base = generateBaseText();
+        if (targetLang === 'uk') {
+          setEditedText(base);
+        } else {
+          translateTextOnline(base, targetLang).then(res => setEditedText(res));
+        }
+      }, [targetLang, generateBaseText]);
+
+      const handleCopy = () => {
+        navigator.clipboard.writeText(editedText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      const handleSMS = () => {
+        window.location.href = `sms:?body=${encodeURIComponent(editedText)}`;
+      };
+
+      const handleEmail = () => {
+        const subject = encodeURIComponent(`${type === 'works' ? 'Додаткові роботи' : 'Замовлення матеріалів'}`);
+        window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(editedText)}`;
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-darkcard w-full max-w-md rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder max-h-[90vh]">
+            <div className="p-4 border-b border-gray-200 dark:border-darkborder flex justify-between items-center">
+              <h2 className="font-bold text-base">{t.share}</h2>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 text-xs overflow-y-auto flex-1">
+              <div>
+                <label className="block text-gray-500 font-medium mb-1.5">{t.translationTarget}:</label>
+                <div className="flex bg-gray-100 dark:bg-darkbg p-1 rounded-xl">
+                  <button 
+                    onClick={() => setTargetLang('uk')}
+                    className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${
+                      targetLang === 'uk' ? 'bg-white dark:bg-darkcard text-brand shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Українська
+                  </button>
+                  <button 
+                    onClick={() => setTargetLang('en')}
+                    className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${
+                      targetLang === 'en' ? 'bg-white dark:bg-darkcard text-brand shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button 
+                    onClick={() => setTargetLang('fr')}
+                    className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${
+                      targetLang === 'fr' ? 'bg-white dark:bg-darkcard text-brand shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Français
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-gray-500 font-medium">{t.previewTitle}:</label>
+                  {isTranslating && (
+                    <span className="text-[10px] text-brand font-bold animate-pulse">
+                      {t.translating}
+                    </span>
+                  )}
+                </div>
+                <textarea 
+                  rows="10"
+                  disabled={isTranslating}
+                  value={editedText}
+                  onChange={(e) => setEditedText(e.target.value)}
+                  className="w-full p-3 rounded-xl border border-gray-300 dark:border-darkborder bg-gray-50 dark:bg-darkbg font-mono text-[11px] leading-relaxed outline-none focus:ring-2 focus:ring-brand disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-darkborder grid grid-cols-3 gap-2">
+              <button 
+                onClick={handleCopy}
+                disabled={isTranslating}
+                className="py-2.5 px-2 bg-brand hover:bg-brand-hover text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-brand/20 col-span-3 sm:col-span-1 disabled:opacity-50"
+              >
+                <Icons.Copy />
+                <span>{copied ? t.copied : t.copyText}</span>
+              </button>
+
+              <button 
+                onClick={handleSMS}
+                disabled={isTranslating}
+                className="py-2.5 px-2 border border-gray-300 dark:border-darkborder font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+              >
+                <Icons.SMS />
+                <span>{t.sendSMS}</span>
+              </button>
+
+              <button 
+                onClick={handleEmail}
+                disabled={isTranslating}
+                className="py-2.5 px-2 border border-gray-300 dark:border-darkborder font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+              >
+                <Icons.Mail />
+                <span>{t.sendEmail}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function SettingsModal({ clientId, setClientId, accessToken, syncStatus, theme, setTheme, lang, setLang, onGoogleLogin, onGoogleLogout, onSyncNow, onClose, t }) {
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-darkcard w-full max-w-md rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder max-h-[90vh]">
+            <div className="p-4 border-b border-gray-200 dark:border-darkborder flex justify-between items-center">
+              <h2 className="font-bold text-base">{t.settings}</h2>
+              <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                <Icons.X />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-5 text-xs overflow-y-auto">
+              {/* Google Drive API Налаштування */}
+              <div className="bg-gray-50 dark:bg-darkbg p-3.5 rounded-xl border border-gray-200 dark:border-darkborder space-y-3">
+                <span className="font-bold block text-gray-700 dark:text-gray-300">{t.userAccount}</span>
+                
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Google OAuth Client ID:</label>
+                  <input 
+                    type="text" 
+                    value={clientId}
+                    onChange={(e) => setClientId(e.target.value)}
+                    placeholder="напр. 123456789-abc.apps.googleusercontent.com"
+                    className="w-full p-2 rounded-lg border border-gray-300 dark:border-darkborder bg-white dark:bg-darkcard outline-none font-mono text-[10px]"
+                  />
+                  <p className="text-[9px] text-gray-400 mt-1">Отримайте Client ID в Google Cloud Console для збереження резервних копій.</p>
+                </div>
+
+                {accessToken ? (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between bg-green-500/10 p-2 rounded-lg border border-green-500/20">
+                      <span className="text-green-600 dark:text-green-400 font-bold text-[11px] flex items-center gap-1">
+                        ✓ {t.googleDriveConnected}
+                      </span>
+                      <button 
+                        onClick={onGoogleLogout}
+                        className="px-2 py-1 text-red-500 hover:bg-red-500/10 rounded font-bold text-[10px]"
+                      >
+                        {t.logout}
+                      </button>
+                    </div>
+                    
+                    <button 
+                      onClick={onSyncNow}
+                      className="w-full py-2 bg-brand hover:bg-brand-hover text-white font-bold rounded-lg text-xs"
+                    >
+                      {t.syncNow}
+                    </button>
+                    {syncStatus && <p className="text-[10px] text-center text-gray-500">{syncStatus}</p>}
+                  </div>
+                ) : (
+                  <button 
+                    onClick={onGoogleLogin}
+                    className="w-full py-2.5 px-3 bg-white dark:bg-darkcard border border-gray-300 dark:border-darkborder hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm text-brand"
+                  >
+                    <Icons.CloudSync />
+                    <span>{t.loginGoogle}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Тема */}
+              <div>
+                <label className="block text-gray-500 font-medium mb-1.5">{t.theme}</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setTheme('dark')}
+                    className={`py-2.5 px-3 rounded-xl border font-bold flex items-center justify-center gap-2 ${
+                      theme === 'dark' 
+                        ? 'border-brand bg-brand/10 text-brand' 
+                        : 'border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    <Icons.Moon />
+                    <span>{t.darkTheme}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setTheme('light')}
+                    className={`py-2.5 px-3 rounded-xl border font-bold flex items-center justify-center gap-2 ${
+                      theme === 'light' 
+                        ? 'border-brand bg-brand/10 text-brand' 
+                        : 'border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    <Icons.Sun />
+                    <span>{t.lightTheme}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Мова інструментів */}
+              <div>
+                <label className="block text-gray-500 font-medium mb-1.5">{t.language}</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => setLang('uk')}
+                    className={`py-2 px-2 rounded-xl border font-bold text-center ${
+                      lang === 'uk' ? 'border-brand bg-brand/10 text-brand' : 'border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    Українська
+                  </button>
+                  <button 
+                    onClick={() => setLang('en')}
+                    className={`py-2 px-2 rounded-xl border font-bold text-center ${
+                      lang === 'en' ? 'border-brand bg-brand/10 text-brand' : 'border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button 
+                    onClick={() => setLang('fr')}
+                    className={`py-2 px-2 rounded-xl border font-bold text-center ${
+                      lang === 'fr' ? 'border-brand bg-brand/10 text-brand' : 'border-gray-200 dark:border-darkborder'
+                    }`}
+                  >
+                    Français
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-darkborder">
+              <button 
+                onClick={onClose}
+                className="w-full py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold shadow-lg shadow-brand/20 text-xs"
+              >
+                ОК
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+"""
+
+with open('index_gdrive_sync.html', 'w', encoding='utf-8') as f:
+    f.write(html_code)
+
+print("Згенеровано новий файл з підтримкою справжнього Google Drive API!")
