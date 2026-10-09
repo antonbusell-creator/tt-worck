@@ -1,4 +1,4 @@
-html_code = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk" class="dark">
 <head>
   <meta charset="UTF-8">
@@ -74,7 +74,7 @@ html_code = """<!DOCTYPE html>
   </div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useCallback } = React;
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
     const Icons = {
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
@@ -94,7 +94,10 @@ html_code = """<!DOCTYPE html>
       SMS: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>,
       Mail: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>,
       AlertCircle: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
-      CloudSync: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      CloudSync: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>,
+      Refresh: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
+      Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+      Upload: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
     };
 
     const TRANSLATIONS = {
@@ -146,7 +149,7 @@ html_code = """<!DOCTYPE html>
         loginGoogle: "Увійти через Google Drive",
         loggedAs: "Підключено",
         logout: "Відключити",
-        googleDriveConnected: "Google Диск підключено (Автосинхронізація)",
+        googleDriveConnected: "Google Диск підключено (Авто-синхронізація)",
         copyText: "Скопіювати текст",
         copied: "Скопійовано!",
         sendSMS: "SMS",
@@ -156,7 +159,8 @@ html_code = """<!DOCTYPE html>
         emptyList: "Список порожній",
         noMaterials: "Матеріали не вказані",
         translating: "Перекладаємо через GoogleTranslate...",
-        syncNow: "Синхронізувати зараз"
+        syncNow: "Зберегти на Диск",
+        loadNow: "Завантажити з Диска"
       }
     };
 
@@ -170,9 +174,12 @@ html_code = """<!DOCTYPE html>
       const [clientId, setClientId] = useState(() => localStorage.getItem('app_google_client_id') || '');
       const [accessToken, setAccessToken] = useState(() => localStorage.getItem('app_google_token') || null);
       const [syncStatus, setSyncStatus] = useState('');
+      const [isSyncing, setIsSyncing] = useState(false);
 
       const [works, setWorks] = useState(() => JSON.parse(localStorage.getItem('app_works_v4')) || []);
       const [orders, setOrders] = useState(() => JSON.parse(localStorage.getItem('app_orders_v4')) || []);
+
+      const lastLocalUpdateRef = useRef(localStorage.getItem('app_last_updated') || new Date().toISOString());
 
       const [selectedWorkIds, setSelectedWorkIds] = useState([]);
       const [selectedOrderIds, setSelectedOrderIds] = useState([]);
@@ -209,55 +216,70 @@ html_code = """<!DOCTYPE html>
         localStorage.setItem('app_google_client_id', clientId);
       }, [clientId]);
 
-      // Функція авторизації через Google Identity Services (GIS)
-      const handleGoogleLogin = () => {
-        if (!clientId.trim()) {
-          alert('Будь ласка, спочатку вкажіть ваш Google OAuth Client ID у Налаштуваннях!');
-          setShowSettings(true);
-          return;
+      // Завантаження найновіших даних з Google Диска
+      const loadFromGoogleDrive = useCallback(async (token = accessToken, silent = false) => {
+        if (!token) return false;
+        if (!silent) {
+          setIsSyncing(true);
+          setSyncStatus('Синхронізація...');
         }
 
-        if (typeof google === 'undefined' || !google.accounts) {
-          alert('Скрипт Google Identity Services ще не завантажився. Перевірте з\'єднання з інтернетом.');
-          return;
-        }
+        try {
+          const searchRes = await fetch("https://www.googleapis.com/drive/v3/files?q=name='construction_backup.json'+and+trashed=false", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const searchData = await searchRes.json();
+          const existingFile = searchData.files && searchData.files[0];
 
-        const client = google.accounts.oauth2.initTokenClient({
-          client_id: clientId.trim(),
-          scope: 'https://www.googleapis.com/auth/drive.file',
-          callback: (response) => {
-            if (response.access_token) {
-              setAccessToken(response.access_token);
-              localStorage.setItem('app_google_token', response.access_token);
-              setSyncStatus('Успішно авторизовано');
-              syncToGoogleDrive(response.access_token);
-            } else {
-              setSyncStatus('Помилка авторизації');
+          if (existingFile) {
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const backupData = await fileRes.json();
+
+            if (backupData) {
+              const remoteTime = backupData.updatedAt || '1970-01-01';
+              const localTime = lastLocalUpdateRef.current || '1970-01-01';
+
+              if (new Date(remoteTime) > new Date(localTime)) {
+                if (Array.isArray(backupData.works)) setWorks(backupData.works);
+                if (Array.isArray(backupData.orders)) setOrders(backupData.orders);
+                lastLocalUpdateRef.current = remoteTime;
+                localStorage.setItem('app_last_updated', remoteTime);
+              }
+              setSyncStatus(`Авто-синхронізовано о ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+              setIsSyncing(false);
+              return true;
             }
-          },
-        });
-        client.requestAccessToken();
-      };
+          }
+        } catch (err) {
+          console.error('Помилка авто-завантаження:', err);
+          if (err.status === 401) {
+            setAccessToken(null);
+            localStorage.removeItem('app_google_token');
+          }
+        }
+        setIsSyncing(false);
+        return false;
+      }, [accessToken]);
 
-      const handleGoogleLogout = () => {
-        setAccessToken(null);
-        localStorage.removeItem('app_google_token');
-        setSyncStatus('');
-      };
-
-      // Синхронізація даних на Google Диск
-      const syncToGoogleDrive = async (token = accessToken) => {
+      // Збереження даних на Google Диск
+      const syncToGoogleDrive = useCallback(async (token = accessToken, currentWorks = works, currentOrders = orders) => {
         if (!token) return;
-        setSyncStatus('Синхронізація...');
+        setIsSyncing(true);
+        setSyncStatus('Збереження у хмару...');
+
+        const now = new Date().toISOString();
+        lastLocalUpdateRef.current = now;
+        localStorage.setItem('app_last_updated', now);
 
         const backupData = {
-          works,
-          orders,
-          updatedAt: new Date().toISOString()
+          works: currentWorks,
+          orders: currentOrders,
+          updatedAt: now
         };
 
         try {
-          // Шукаємо файл резервної копії на Диску
           const searchRes = await fetch("https://www.googleapis.com/drive/v3/files?q=name='construction_backup.json'+and+trashed=false", {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -267,7 +289,6 @@ html_code = """<!DOCTYPE html>
           const fileContent = JSON.stringify(backupData, null, 2);
           
           if (existingFile) {
-            // Оновлюємо існуючий файл
             await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
               method: 'PATCH',
               headers: {
@@ -277,7 +298,6 @@ html_code = """<!DOCTYPE html>
               body: fileContent
             });
           } else {
-            // Створюємо новий файл
             const metadata = {
               name: 'construction_backup.json',
               mimeType: 'application/json'
@@ -295,43 +315,111 @@ html_code = """<!DOCTYPE html>
           setSyncStatus(`Збережено о ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
         } catch (err) {
           console.error(err);
-          setSyncStatus('Помилка збереження на Диск');
+          setSyncStatus('Помилка авто-збереження');
+        } finally {
+          setIsSyncing(false);
         }
+      }, [accessToken, works, orders]);
+
+      // АВТО-СИНХРОНІЗАЦІЯ
+      useEffect(() => {
+        if (!accessToken) return;
+
+        loadFromGoogleDrive(accessToken, true);
+
+        const handleFocus = () => {
+          loadFromGoogleDrive(accessToken, true);
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleFocus);
+
+        const intervalId = setInterval(() => {
+          loadFromGoogleDrive(accessToken, true);
+        }, 20000);
+
+        return () => {
+          window.removeEventListener('focus', handleFocus);
+          document.removeEventListener('visibilitychange', handleFocus);
+          clearInterval(intervalId);
+        };
+      }, [accessToken, loadFromGoogleDrive]);
+
+      const handleGoogleLogin = () => {
+        if (!clientId.trim()) {
+          alert('Будь ласка, вкажіть ваш Google OAuth Client ID у Налаштуваннях!');
+          setShowSettings(true);
+          return;
+        }
+
+        if (typeof google === 'undefined' || !google.accounts) {
+          alert('Скрипт Google Identity Services завантажується...');
+          return;
+        }
+
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId.trim(),
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: async (response) => {
+            if (response.access_token) {
+              setAccessToken(response.access_token);
+              localStorage.setItem('app_google_token', response.access_token);
+              await loadFromGoogleDrive(response.access_token);
+            } else {
+              setSyncStatus('Помилка входу');
+            }
+          },
+        });
+        client.requestAccessToken();
       };
 
-      const activeWorks = useMemo(() => works.filter(w => w.isArchived === showArchive), [works, showArchive]);
-      const activeOrders = useMemo(() => orders.filter(o => o.isArchived === showArchive), [orders, showArchive]);
+      const handleGoogleLogout = () => {
+        setAccessToken(null);
+        localStorage.removeItem('app_google_token');
+        setSyncStatus('');
+      };
+
+      const activeWorks = useMemo(() => works.filter(w => Boolean(w.isArchived) === showArchive), [works, showArchive]);
+      const activeOrders = useMemo(() => orders.filter(o => Boolean(o.isArchived) === showArchive), [orders, showArchive]);
 
       useEffect(() => {
         setSelectedWorkIds([]);
         setSelectedOrderIds([]);
       }, [activeTab, showArchive]);
 
+      // ВИПРАВЛЕНО: Збереження додаткової роботи з збереженням усіх існуючих полів (isArchived, createdAt)
       const handleSaveWork = (formData) => {
+        let updatedWorks = [];
         if (formData.id) {
-          setWorks(works.map(w => w.id === formData.id ? { ...formData, updatedAt: new Date().toISOString() } : w));
+          updatedWorks = works.map(w => w.id === formData.id ? { ...w, ...formData, updatedAt: new Date().toISOString() } : w);
         } else {
           const newWork = {
-            ...formData,
-            id: Date.now().toString(),
             isArchived: false,
             createdAt: new Date().toISOString(),
+            ...formData,
+            id: Date.now().toString(),
             updatedAt: new Date().toISOString()
           };
-          setWorks([newWork, ...works]);
+          updatedWorks = [newWork, ...works];
         }
+        setWorks(updatedWorks);
         setWorkModal({ open: false, item: null });
+        if (accessToken) syncToGoogleDrive(accessToken, updatedWorks, orders);
       };
 
       const handleDeleteWork = (id) => {
         if (confirm(t.confirmDelete)) {
-          setWorks(works.filter(w => w.id !== id));
+          const updatedWorks = works.filter(w => w.id !== id);
+          setWorks(updatedWorks);
           setSelectedWorkIds(selectedWorkIds.filter(i => i !== id));
+          if (accessToken) syncToGoogleDrive(accessToken, updatedWorks, orders);
         }
       };
 
       const handleToggleArchiveWork = (id) => {
-        setWorks(works.map(w => w.id === id ? { ...w, isArchived: !w.isArchived } : w));
+        const updatedWorks = works.map(w => w.id === id ? { ...w, isArchived: !w.isArchived } : w);
+        setWorks(updatedWorks);
+        if (accessToken) syncToGoogleDrive(accessToken, updatedWorks, orders);
       };
 
       const handleSelectAllWorks = (e) => {
@@ -339,46 +427,58 @@ html_code = """<!DOCTYPE html>
       };
 
       const handleBulkArchiveWorks = () => {
-        setWorks(works.map(w => selectedWorkIds.includes(w.id) ? { ...w, isArchived: !showArchive } : w));
+        const updatedWorks = works.map(w => selectedWorkIds.includes(w.id) ? { ...w, isArchived: !showArchive } : w);
+        setWorks(updatedWorks);
         setSelectedWorkIds([]);
+        if (accessToken) syncToGoogleDrive(accessToken, updatedWorks, orders);
       };
 
       const handleBulkDeleteWorks = () => {
         if (confirm(t.confirmBulkDelete)) {
-          setWorks(works.filter(w => !selectedWorkIds.includes(w.id)));
+          const updatedWorks = works.filter(w => !selectedWorkIds.includes(w.id));
+          setWorks(updatedWorks);
           setSelectedWorkIds([]);
+          if (accessToken) syncToGoogleDrive(accessToken, updatedWorks, orders);
         }
       };
 
+      // ВИПРАВЛЕНО: Збереження замовлення матеріалів з збереженням усіх існуючих полів (isArchived, createdAt)
       const handleSaveOrder = (formData) => {
+        let updatedOrders = [];
         if (formData.id) {
-          setOrders(orders.map(o => o.id === formData.id ? { ...formData, updatedAt: new Date().toISOString() } : o));
+          updatedOrders = orders.map(o => o.id === formData.id ? { ...o, ...formData, updatedAt: new Date().toISOString() } : o);
         } else {
           const newOrder = {
-            ...formData,
-            id: Date.now().toString(),
             isArchived: false,
             createdAt: new Date().toISOString(),
+            ...formData,
+            id: Date.now().toString(),
             updatedAt: new Date().toISOString()
           };
-          setOrders([newOrder, ...orders]);
+          updatedOrders = [newOrder, ...orders];
         }
+        setOrders(updatedOrders);
         setOrderModal({ open: false, item: null });
+        if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
       };
 
       const handleDeleteOrder = (id) => {
         if (confirm(t.confirmDelete)) {
-          setOrders(orders.filter(o => o.id !== id));
+          const updatedOrders = orders.filter(o => o.id !== id);
+          setOrders(updatedOrders);
           setSelectedOrderIds(selectedOrderIds.filter(i => i !== id));
+          if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
         }
       };
 
       const handleToggleArchiveOrder = (id) => {
-        setOrders(orders.map(o => o.id === id ? { ...o, isArchived: !o.isArchived } : o));
+        const updatedOrders = orders.map(o => o.id === id ? { ...o, isArchived: !o.isArchived } : o);
+        setOrders(updatedOrders);
+        if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
       };
 
       const handleSaveOrderStatus = (orderId, updatedMaterials) => {
-        setOrders(orders.map(o => {
+        const updatedOrders = orders.map(o => {
           if (o.id === orderId) {
             const allReceived = updatedMaterials.length > 0 && updatedMaterials.every(m => m.received);
             const someReceived = updatedMaterials.some(m => m.received);
@@ -394,8 +494,10 @@ html_code = """<!DOCTYPE html>
             };
           }
           return o;
-        }));
+        });
+        setOrders(updatedOrders);
         setStatusModal({ open: false, order: null });
+        if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
       };
 
       const handleSelectAllOrders = (e) => {
@@ -403,14 +505,18 @@ html_code = """<!DOCTYPE html>
       };
 
       const handleBulkArchiveOrders = () => {
-        setOrders(orders.map(o => selectedOrderIds.includes(o.id) ? { ...o, isArchived: !showArchive } : o));
+        const updatedOrders = orders.map(o => selectedOrderIds.includes(o.id) ? { ...o, isArchived: !showArchive } : o);
+        setOrders(updatedOrders);
         setSelectedOrderIds([]);
+        if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
       };
 
       const handleBulkDeleteOrders = () => {
         if (confirm(t.confirmBulkDelete)) {
-          setOrders(orders.filter(o => !selectedOrderIds.includes(o.id)));
+          const updatedOrders = orders.filter(o => !selectedOrderIds.includes(o.id));
+          setOrders(updatedOrders);
           setSelectedOrderIds([]);
+          if (accessToken) syncToGoogleDrive(accessToken, works, updatedOrders);
         }
       };
 
@@ -495,14 +601,24 @@ html_code = """<!DOCTYPE html>
                 <div>
                   <h1 className="font-bold text-base leading-tight">{t.appTitle}</h1>
                   {accessToken && (
-                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 cursor-pointer" onClick={() => syncToGoogleDrive()}>
-                      ● {syncStatus || 'Google Drive Active'}
+                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 cursor-pointer" onClick={() => loadFromGoogleDrive(accessToken)}>
+                      <span className={isSyncing ? "animate-spin" : ""}>●</span> {syncStatus || 'Авто-синхронізація активна'}
                     </span>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                {accessToken && (
+                  <button 
+                    onClick={() => loadFromGoogleDrive(accessToken)}
+                    className={`p-2 rounded-lg border border-gray-200 dark:border-darkborder hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-brand ${isSyncing ? 'animate-spin' : ''}`}
+                    title="Примусово оновити з Диска"
+                  >
+                    <Icons.Refresh />
+                  </button>
+                )}
+
                 <button 
                   onClick={() => setShowArchive(!showArchive)}
                   className={`p-2 rounded-lg border text-xs font-medium flex items-center gap-1 transition-colors ${
@@ -739,6 +855,7 @@ html_code = """<!DOCTYPE html>
               onGoogleLogin={handleGoogleLogin}
               onGoogleLogout={handleGoogleLogout}
               onSyncNow={() => syncToGoogleDrive()}
+              onLoadNow={() => loadFromGoogleDrive(accessToken)}
               onClose={() => setShowSettings(false)}
               t={t}
             />
@@ -973,6 +1090,7 @@ html_code = """<!DOCTYPE html>
         e.preventDefault();
         onSave({
           id: item?.id,
+          isArchived: item?.isArchived || false,
           projectName,
           description,
           date,
@@ -1157,6 +1275,7 @@ html_code = """<!DOCTYPE html>
         e.preventDefault();
         onSave({
           id: item?.id,
+          isArchived: item?.isArchived || false,
           projectName,
           date,
           isUrgent,
@@ -1547,7 +1666,7 @@ html_code = """<!DOCTYPE html>
       );
     }
 
-    function SettingsModal({ clientId, setClientId, accessToken, syncStatus, theme, setTheme, lang, setLang, onGoogleLogin, onGoogleLogout, onSyncNow, onClose, t }) {
+    function SettingsModal({ clientId, setClientId, accessToken, syncStatus, theme, setTheme, lang, setLang, onGoogleLogin, onGoogleLogout, onSyncNow, onLoadNow, onClose, t }) {
       return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white dark:bg-darkcard w-full max-w-md rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl border border-gray-200 dark:border-darkborder max-h-[90vh]">
@@ -1559,7 +1678,6 @@ html_code = """<!DOCTYPE html>
             </div>
 
             <div className="p-4 space-y-5 text-xs overflow-y-auto">
-              {/* Google Drive API Налаштування */}
               <div className="bg-gray-50 dark:bg-darkbg p-3.5 rounded-xl border border-gray-200 dark:border-darkborder space-y-3">
                 <span className="font-bold block text-gray-700 dark:text-gray-300">{t.userAccount}</span>
                 
@@ -1589,12 +1707,24 @@ html_code = """<!DOCTYPE html>
                       </button>
                     </div>
                     
-                    <button 
-                      onClick={onSyncNow}
-                      className="w-full py-2 bg-brand hover:bg-brand-hover text-white font-bold rounded-lg text-xs"
-                    >
-                      {t.syncNow}
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={onLoadNow}
+                        className="py-2.5 px-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        <Icons.Download />
+                        <span>{t.loadNow}</span>
+                      </button>
+
+                      <button 
+                        onClick={onSyncNow}
+                        className="py-2.5 px-2 bg-brand hover:bg-brand-hover text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1"
+                      >
+                        <Icons.Upload />
+                        <span>{t.syncNow}</span>
+                      </button>
+                    </div>
+
                     {syncStatus && <p className="text-[10px] text-center text-gray-500">{syncStatus}</p>}
                   </div>
                 ) : (
@@ -1608,7 +1738,6 @@ html_code = """<!DOCTYPE html>
                 )}
               </div>
 
-              {/* Тема */}
               <div>
                 <label className="block text-gray-500 font-medium mb-1.5">{t.theme}</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -1638,7 +1767,6 @@ html_code = """<!DOCTYPE html>
                 </div>
               </div>
 
-              {/* Мова інструментів */}
               <div>
                 <label className="block text-gray-500 font-medium mb-1.5">{t.language}</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -1688,9 +1816,3 @@ html_code = """<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
-
-with open('index_gdrive_sync.html', 'w', encoding='utf-8') as f:
-    f.write(html_code)
-
-print("Згенеровано новий файл з підтримкою справжнього Google Drive API!")
