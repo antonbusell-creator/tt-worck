@@ -24,6 +24,26 @@
   <script src="https://apis.google.com/js/api.js" async defer></script>
 
   <script>
+    function saveData() {
+  saveData();
+  if (typeof db !== 'undefined') {
+    db.ref('construction_data').set(appData); // відправляємо в Firebase
+  }
+}
+    if (typeof db !== 'undefined') {
+  db.ref('construction_data').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      appData = data;
+      saveData();
+      if (typeof renderApp === 'function') {
+        renderApp(); // перемальовуємо екран
+      } else if (typeof render === 'function') {
+        render();
+      }
+    }
+  });
+}
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -339,23 +359,23 @@
         } else {
           document.documentElement.classList.remove('dark');
         }
-        localStorage.setItem('app_theme', theme);
+        saveData();
       }, [theme]);
 
       useEffect(() => {
-        localStorage.setItem('app_works_v4', JSON.stringify(works));
+        saveData();
       }, [works]);
 
       useEffect(() => {
-        localStorage.setItem('app_orders_v4', JSON.stringify(orders));
+        saveData();
       }, [orders]);
 
       useEffect(() => {
-        localStorage.setItem('app_lang', lang);
+        saveData();
       }, [lang]);
 
       useEffect(() => {
-        localStorage.setItem('app_google_client_id', clientId);
+        saveData();
       }, [clientId]);
 
       // Завантаження найновіших даних з Google Диска
@@ -387,7 +407,7 @@
                 if (Array.isArray(backupData.works)) setWorks(backupData.works);
                 if (Array.isArray(backupData.orders)) setOrders(backupData.orders);
                 lastLocalUpdateRef.current = remoteTime;
-                localStorage.setItem('app_last_updated', remoteTime);
+                saveData();
               }
               setSyncStatus(`Авто-синхронізовано о ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
               setIsSyncing(false);
@@ -413,7 +433,7 @@
 
         const now = new Date().toISOString();
         lastLocalUpdateRef.current = now;
-        localStorage.setItem('app_last_updated', now);
+        saveData();
 
         const backupData = {
           works: currentWorks,
@@ -505,7 +525,7 @@
           callback: async (response) => {
             if (response.access_token) {
               setAccessToken(response.access_token);
-              localStorage.setItem('app_google_token', response.access_token);
+              ('app_google_token', response.access_token);
               await loadFromGoogleDrive(response.access_token);
             } else {
               setSyncStatus('Помилка входу');
