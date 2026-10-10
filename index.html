@@ -63,6 +63,25 @@
       border-radius: 3px;
     }
   </style>
+<!-- Firebase SDK (Compat-версія для прямого доступу) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+  apiKey: "AIzaSyCUrzhiAOd4EHnQVV-rHAPLnPBJ4GZXPg4",
+  authDomain: "bud-oblik.firebaseapp.com",
+  projectId: "bud-oblik",
+  storageBucket: "bud-oblik.firebasestorage.app",
+  messagingSenderId: "316116549459",
+  appId: "1:316116549459:web:f4427725fa910af4ababa6",
+  measurementId: "G-3B7FCSCLPV"
+};
+
+    // Ініціалізація Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
 </head>
 <body class="bg-gray-100 dark:bg-darkbg text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
   <div id="root">
