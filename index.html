@@ -23,27 +23,11 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
   <script>
-    function saveData() {
-  saveData();
-  if (typeof db !== 'undefined') {
-    db.ref('construction_data').set(appData); // відправляємо в Firebase
-  }
-}
-    if (typeof db !== 'undefined') {
-  db.ref('construction_data').on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      appData = data;
-      saveData();
-      if (typeof renderApp === 'function') {
-        renderApp(); // перемальовуємо екран
-      } else if (typeof render === 'function') {
-        render();
-      }
-    }
-  });
-}
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -60,6 +44,25 @@
           }
         }
       }
+    };
+
+    // Ініціалізація Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCUrzhiAOd4EHnQVV-rHAPLnPBJ4GZXPg4",
+      authDomain: "bud-oblik.firebaseapp.com",
+      databaseURL: "https://bud-oblik-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "bud-oblik",
+      storageBucket: "bud-oblik.firebasestorage.app",
+      messagingSenderId: "316116549459",
+      appId: "1:316116549459:web:f4427725fa910af4ababa6",
+      measurementId: "G-3B7FCSCLPV"
+    };
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      window.db = firebase.database();
+    } catch (e) {
+      console.error("Firebase initialization error:", e);
     }
   </script>
   
@@ -83,26 +86,6 @@
       border-radius: 3px;
     }
   </style>
-<!-- Firebase SDK (Compat-версія для прямого доступу) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
-  <script>
-    const firebaseConfig = {
-  apiKey: "AIzaSyCUrzhiAOd4EHnQVV-rHAPLnPBJ4GZXPg4",
-  authDomain: "bud-oblik.firebaseapp.com",
-  databaseURL: "https://bud-oblik-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "bud-oblik",
-  storageBucket: "bud-oblik.firebasestorage.app",
-  messagingSenderId: "316116549459",
-  appId: "1:316116549459:web:f4427725fa910af4ababa6",
-  measurementId: "G-3B7FCSCLPV"
-};
-
-    // Ініціалізація Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-  </script>
 </head>
 <body class="bg-gray-100 dark:bg-darkbg text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-200">
   <div id="root">
@@ -142,190 +125,190 @@
     };
 
     const TRANSLATIONS = {
-  uk: {
-    appTitle: "Будівельний Облік",
-    extraWorks: "Додаткові роботи",
-    materialOrders: "Замовлення матеріалів",
-    addWork: "Додати додаткову роботу",
-    addOrder: "Замовити матеріал",
-    archive: "Архів",
-    settings: "Налаштування",
-    projectName: "Назва проекту / об'єкта",
-    workDescription: "Опис виконаної роботи",
-    materialsUsed: "Використані матеріали",
-    materialsList: "Список матеріалів",
-    materialDesc: "Опис матеріалу",
-    qty: "Кількість",
-    unit: "Од. вим.",
-    addMaterial: "Додати матеріал",
-    date: "Дата проведення робіт",
-    orderDate: "Дата замовлення",
-    hoursSpent: "Затрачений час (год)",
-    peopleCount: "Кількість людей",
-    manHours: "Разом людино-годин",
-    save: "Зберегти",
-    cancel: "Скасувати",
-    edit: "Редагувати",
-    share: "Поширити",
-    toArchive: "В архів",
-    fromArchive: "Розархівувати",
-    excel: "Ексель",
-    delete: "Видалити",
-    status: "Статус",
-    urgent: "ТЕРМІНОВО",
-    isUrgent: "Помітити як терміново",
-    received: "Отримано",
-    inProgress: "В процесі",
-    completed: "Виконано",
-    newOrder: "Нова",
-    selectAll: "Виділити все",
-    selected: "Виділено",
-    confirmDelete: "Ви впевнені, що хочете видалити обраний запис?",
-    confirmBulkDelete: "Ви впевнені, що хочете видалити всі виділені записи?",
-    theme: "Тема оформлення",
-    darkTheme: "Темна",
-    lightTheme: "Світла",
-    language: "Мова додатка",
-    userAccount: "Google Drive API Налаштування",
-    loginGoogle: "Увійти через Google Drive",
-    loggedAs: "Підключено",
-    logout: "Відключити",
-    googleDriveConnected: "Google Диск підключено (Авто-синхронізація)",
-    copyText: "Скопіювати текст",
-    copied: "Скопійовано!",
-    sendSMS: "SMS",
-    sendEmail: "Email",
-    previewTitle: "Попередній перегляд та редагування",
-    translationTarget: "Перекласти весь текст на",
-    emptyList: "Список порожній",
-    noMaterials: "Матеріали не вказані",
-    translating: "Перекладаємо через GoogleTranslate...",
-    syncNow: "Зберегти на Диск",
-    loadNow: "Завантажити з Диска"
-  },
-  en: {
-    appTitle: "Construction Tracker",
-    extraWorks: "Extra Works",
-    materialOrders: "Material Orders",
-    addWork: "Add Extra Work",
-    addOrder: "Order Material",
-    archive: "Archive",
-    settings: "Settings",
-    projectName: "Project / Site Name",
-    workDescription: "Work Description",
-    materialsUsed: "Materials Used",
-    materialsList: "Materials List",
-    materialDesc: "Material Description",
-    qty: "Qty",
-    unit: "Unit",
-    addMaterial: "Add Material",
-    date: "Work Date",
-    orderDate: "Order Date",
-    hoursSpent: "Hours Spent (h)",
-    peopleCount: "Number of People",
-    manHours: "Total Man-hours",
-    save: "Save",
-    cancel: "Cancel",
-    edit: "Edit",
-    share: "Share",
-    toArchive: "To Archive",
-    fromArchive: "Unarchive",
-    excel: "Excel",
-    delete: "Delete",
-    status: "Status",
-    urgent: "URGENT",
-    isUrgent: "Mark as urgent",
-    received: "Received",
-    inProgress: "In Progress",
-    completed: "Completed",
-    newOrder: "New",
-    selectAll: "Select All",
-    selected: "Selected",
-    confirmDelete: "Are you sure you want to delete the selected record?",
-    confirmBulkDelete: "Are you sure you want to delete all selected records?",
-    theme: "Theme",
-    darkTheme: "Dark",
-    lightTheme: "Light",
-    language: "App Language",
-    userAccount: "Google Drive API Settings",
-    loginGoogle: "Sign in with Google Drive",
-    loggedAs: "Connected",
-    logout: "Disconnect",
-    googleDriveConnected: "Google Drive Connected (Auto-sync)",
-    copyText: "Copy Text",
-    copied: "Copied!",
-    sendSMS: "SMS",
-    sendEmail: "Email",
-    previewTitle: "Preview and Edit",
-    translationTarget: "Translate all text to",
-    emptyList: "List is empty",
-    noMaterials: "No materials specified",
-    translating: "Translating via Google Translate...",
-    syncNow: "Save to Drive",
-    loadNow: "Load from Drive"
-  },
-  fr: {
-    appTitle: "Suivi de Chantier",
-    extraWorks: "Travaux supplémentaires",
-    materialOrders: "Commandes de matériaux",
-    addWork: "Ajouter un travail supplémentaire",
-    addOrder: "Commander du matériel",
-    archive: "Archives",
-    settings: "Paramètres",
-    projectName: "Nom du projet / chantier",
-    workDescription: "Description des travaux",
-    materialsUsed: "Matériaux utilisés",
-    materialsList: "Liste des matériaux",
-    materialDesc: "Description du matériel",
-    qty: "Qté",
-    unit: "Unité",
-    addMaterial: "Ajouter un matériel",
-    date: "Date des travaux",
-    orderDate: "Date de commande",
-    hoursSpent: "Temps passé (h)",
-    peopleCount: "Nombre de personnes",
-    manHours: "Total heures-hommes",
-    save: "Enregistrer",
-    cancel: "Annuler",
-    edit: "Modifier",
-    share: "Partager",
-    toArchive: "Archiver",
-    fromArchive: "Désarchiver",
-    excel: "Excel",
-    delete: "Supprimer",
-    status: "Statut",
-    urgent: "URGENT",
-    isUrgent: "Marquer comme urgent",
-    received: "Reçu",
-    inProgress: "En cours",
-    completed: "Terminé",
-    newOrder: "Nouveau",
-    selectAll: "Tout sélectionner",
-    selected: "Sélectionné",
-    confirmDelete: "Voulez-vous vraiment supprimer cet enregistrement ?",
-    confirmBulkDelete: "Voulez-vous vraiment supprimer tous les enregistrements sélectionnés ?",
-    theme: "Thème",
-    darkTheme: "Sombre",
-    lightTheme: "Clair",
-    language: "Langue de l'application",
-    userAccount: "Paramètres API Google Drive",
-    loginGoogle: "Se connecter avec Google Drive",
-    loggedAs: "Connecté",
-    logout: "Déconnecter",
-    googleDriveConnected: "Google Drive connecté (Sync-auto)",
-    copyText: "Copier le texte",
-    copied: "Copié !",
-    sendSMS: "SMS",
-    sendEmail: "E-mail",
-    previewTitle: "Aperçu et modification",
-    translationTarget: "Traduire tout le texte en",
-    emptyList: "La liste est vide",
-    noMaterials: "Aucun matériel spécifié",
-    translating: "Traduction via Google Translate...",
-    syncNow: "Enregistrer sur Drive",
-    loadNow: "Charger depuis Drive"
-  }
-};
+      uk: {
+        appTitle: "Будівельний Облік",
+        extraWorks: "Додаткові роботи",
+        materialOrders: "Замовлення матеріалів",
+        addWork: "Додати додаткову роботу",
+        addOrder: "Замовити матеріал",
+        archive: "Архів",
+        settings: "Налаштування",
+        projectName: "Назва проекту / об'єкта",
+        workDescription: "Опис виконаної роботи",
+        materialsUsed: "Використані матеріали",
+        materialsList: "Список матеріалів",
+        materialDesc: "Опис матеріалу",
+        qty: "Кількість",
+        unit: "Од. вим.",
+        addMaterial: "Додати матеріал",
+        date: "Дата проведення робіт",
+        orderDate: "Дата замовлення",
+        hoursSpent: "Затрачений час (год)",
+        peopleCount: "Кількість людей",
+        manHours: "Разом людино-годин",
+        save: "Зберегти",
+        cancel: "Скасувати",
+        edit: "Редагувати",
+        share: "Поширити",
+        toArchive: "В архів",
+        fromArchive: "Розархівувати",
+        excel: "Ексель",
+        delete: "Видалити",
+        status: "Статус",
+        urgent: "ТЕРМІНОВО",
+        isUrgent: "Помітити як терміново",
+        received: "Отримано",
+        inProgress: "В процесі",
+        completed: "Виконано",
+        newOrder: "Нова",
+        selectAll: "Виділити все",
+        selected: "Виділено",
+        confirmDelete: "Ви впевнені, що хочете видалити обраний запис?",
+        confirmBulkDelete: "Ви впевнені, що хочете видалити всі виділені записи?",
+        theme: "Тема оформлення",
+        darkTheme: "Темна",
+        lightTheme: "Світла",
+        language: "Мова додатка",
+        userAccount: "Google Drive API Налаштування",
+        loginGoogle: "Увійти через Google Drive",
+        loggedAs: "Підключено",
+        logout: "Відключити",
+        googleDriveConnected: "Google Диск підключено (Авто-синхронізація)",
+        copyText: "Скопіювати текст",
+        copied: "Скопійовано!",
+        sendSMS: "SMS",
+        sendEmail: "Email",
+        previewTitle: "Попередній перегляд та редагування",
+        translationTarget: "Перекласти весь текст на",
+        emptyList: "Список порожній",
+        noMaterials: "Матеріали не вказані",
+        translating: "Перекладаємо через GoogleTranslate...",
+        syncNow: "Зберегти на Диск",
+        loadNow: "Завантажити з Диска"
+      },
+      en: {
+        appTitle: "Construction Tracker",
+        extraWorks: "Extra Works",
+        materialOrders: "Material Orders",
+        addWork: "Add Extra Work",
+        addOrder: "Order Material",
+        archive: "Archive",
+        settings: "Settings",
+        projectName: "Project / Site Name",
+        workDescription: "Work Description",
+        materialsUsed: "Materials Used",
+        materialsList: "Materials List",
+        materialDesc: "Material Description",
+        qty: "Qty",
+        unit: "Unit",
+        addMaterial: "Add Material",
+        date: "Work Date",
+        orderDate: "Order Date",
+        hoursSpent: "Hours Spent (h)",
+        peopleCount: "Number of People",
+        manHours: "Total Man-hours",
+        save: "Save",
+        cancel: "Cancel",
+        edit: "Edit",
+        share: "Share",
+        toArchive: "To Archive",
+        fromArchive: "Unarchive",
+        excel: "Excel",
+        delete: "Delete",
+        status: "Status",
+        urgent: "URGENT",
+        isUrgent: "Mark as urgent",
+        received: "Received",
+        inProgress: "In Progress",
+        completed: "Completed",
+        newOrder: "New",
+        selectAll: "Select All",
+        selected: "Selected",
+        confirmDelete: "Are you sure you want to delete the selected record?",
+        confirmBulkDelete: "Are you sure you want to delete all selected records?",
+        theme: "Theme",
+        darkTheme: "Dark",
+        lightTheme: "Light",
+        language: "App Language",
+        userAccount: "Google Drive API Settings",
+        loginGoogle: "Sign in with Google Drive",
+        loggedAs: "Connected",
+        logout: "Disconnect",
+        googleDriveConnected: "Google Drive Connected (Auto-sync)",
+        copyText: "Copy Text",
+        copied: "Copied!",
+        sendSMS: "SMS",
+        sendEmail: "Email",
+        previewTitle: "Preview and Edit",
+        translationTarget: "Translate all text to",
+        emptyList: "List is empty",
+        noMaterials: "No materials specified",
+        translating: "Translating via Google Translate...",
+        syncNow: "Save to Drive",
+        loadNow: "Load from Drive"
+      },
+      fr: {
+        appTitle: "Suivi de Chantier",
+        extraWorks: "Travaux supplémentaires",
+        materialOrders: "Commandes de matériaux",
+        addWork: "Ajouter un travail supplémentaire",
+        addOrder: "Commander du matériel",
+        archive: "Archives",
+        settings: "Paramètres",
+        projectName: "Nom du projet / chantier",
+        workDescription: "Description des travaux",
+        materialsUsed: "Matériaux utilisés",
+        materialsList: "Liste des matériaux",
+        materialDesc: "Description du matériel",
+        qty: "Qté",
+        unit: "Unité",
+        addMaterial: "Ajouter un matériel",
+        date: "Date des travaux",
+        orderDate: "Date de commande",
+        hoursSpent: "Temps passé (h)",
+        peopleCount: "Nombre de personnes",
+        manHours: "Total heures-hommes",
+        save: "Enregistrer",
+        cancel: "Annuler",
+        edit: "Modifier",
+        share: "Partager",
+        toArchive: "Archiver",
+        fromArchive: "Désarchiver",
+        excel: "Excel",
+        delete: "Supprimer",
+        status: "Statut",
+        urgent: "URGENT",
+        isUrgent: "Marquer comme urgent",
+        received: "Reçu",
+        inProgress: "En cours",
+        completed: "Terminé",
+        newOrder: "Nouveau",
+        selectAll: "Tout sélectionner",
+        selected: "Sélectionné",
+        confirmDelete: "Voulez-vous vraiment supprimer cet enregistrement ?",
+        confirmBulkDelete: "Voulez-vous vraiment supprimer tous les enregistrements sélectionnés ?",
+        theme: "Thème",
+        darkTheme: "Sombre",
+        lightTheme: "Clair",
+        language: "Langue de l'application",
+        userAccount: "Paramètres API Google Drive",
+        loginGoogle: "Se connecter avec Google Drive",
+        loggedAs: "Connecté",
+        logout: "Déconnecter",
+        googleDriveConnected: "Google Drive connecté (Sync-auto)",
+        copyText: "Copier le texte",
+        copied: "Copié !",
+        sendSMS: "SMS",
+        sendEmail: "E-mail",
+        previewTitle: "Aperçu et modification",
+        translationTarget: "Traduire tout le texte en",
+        emptyList: "La liste est vide",
+        noMaterials: "Aucun matériel spécifié",
+        translating: "Traduction via Google Translate...",
+        syncNow: "Enregistrer sur Drive",
+        loadNow: "Charger depuis Drive"
+      }
+    };
 
     function App() {
       const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
@@ -343,6 +326,8 @@
       const [orders, setOrders] = useState(() => JSON.parse(localStorage.getItem('app_orders_v4')) || []);
 
       const lastLocalUpdateRef = useRef(localStorage.getItem('app_last_updated') || new Date().toISOString());
+      const isInitialMount = useRef(true);
+      const isRemoteUpdate = useRef(false);
 
       const [selectedWorkIds, setSelectedWorkIds] = useState([]);
       const [selectedOrderIds, setSelectedOrderIds] = useState([]);
@@ -354,32 +339,77 @@
 
       const t = TRANSLATIONS[lang] || TRANSLATIONS.uk;
 
+      // Синхронізація з Firebase та LocalStorage
       useEffect(() => {
         if (theme === 'dark') {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
         }
-        saveData();
+        localStorage.setItem('app_theme', theme);
       }, [theme]);
 
       useEffect(() => {
-        saveData();
-      }, [works]);
-
-      useEffect(() => {
-        saveData();
-      }, [orders]);
-
-      useEffect(() => {
-        saveData();
+        localStorage.setItem('app_lang', lang);
       }, [lang]);
 
       useEffect(() => {
-        saveData();
+        localStorage.setItem('app_google_client_id', clientId);
       }, [clientId]);
 
-      // Завантаження найновіших даних з Google Диска
+      useEffect(() => {
+        localStorage.setItem('app_works_v4', JSON.stringify(works));
+        if (isInitialMount.current) return;
+        if (isRemoteUpdate.current) {
+          isRemoteUpdate.current = false;
+          return;
+        }
+        if (window.db) {
+          window.db.ref('construction_data').set({ works, orders });
+        }
+      }, [works]);
+
+      useEffect(() => {
+        localStorage.setItem('app_orders_v4', JSON.stringify(orders));
+        if (isInitialMount.current) return;
+        if (isRemoteUpdate.current) {
+          isRemoteUpdate.current = false;
+          return;
+        }
+        if (window.db) {
+          window.db.ref('construction_data').set({ works, orders });
+        }
+      }, [orders]);
+
+      useEffect(() => {
+        isInitialMount.current = false;
+      }, []);
+
+      // Отримання даних з Firebase в реальному часі
+      useEffect(() => {
+        if (window.db) {
+          const ref = window.db.ref('construction_data');
+          const handleSnapshot = (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              if (data.works && Array.isArray(data.works)) {
+                isRemoteUpdate.current = true;
+                setWorks(data.works);
+                localStorage.setItem('app_works_v4', JSON.stringify(data.works));
+              }
+              if (data.orders && Array.isArray(data.orders)) {
+                isRemoteUpdate.current = true;
+                setOrders(data.orders);
+                localStorage.setItem('app_orders_v4', JSON.stringify(data.orders));
+              }
+            }
+          };
+          ref.on('value', handleSnapshot);
+          return () => ref.off('value', handleSnapshot);
+        }
+      }, []);
+
+      // Google Drive функції
       const loadFromGoogleDrive = useCallback(async (token = accessToken, silent = false) => {
         if (!token) return false;
         if (!silent) {
@@ -408,7 +438,6 @@
                 if (Array.isArray(backupData.works)) setWorks(backupData.works);
                 if (Array.isArray(backupData.orders)) setOrders(backupData.orders);
                 lastLocalUpdateRef.current = remoteTime;
-                saveData();
               }
               setSyncStatus(`Авто-синхронізовано о ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
               setIsSyncing(false);
@@ -426,7 +455,6 @@
         return false;
       }, [accessToken]);
 
-      // Збереження даних на Google Диск
       const syncToGoogleDrive = useCallback(async (token = accessToken, currentWorks = works, currentOrders = orders) => {
         if (!token) return;
         setIsSyncing(true);
@@ -434,7 +462,6 @@
 
         const now = new Date().toISOString();
         lastLocalUpdateRef.current = now;
-        saveData();
 
         const backupData = {
           works: currentWorks,
@@ -484,30 +511,6 @@
         }
       }, [accessToken, works, orders]);
 
-      // АВТО-СИНХРОНІЗАЦІЯ
-      useEffect(() => {
-        if (!accessToken) return;
-
-        loadFromGoogleDrive(accessToken, true);
-
-        const handleFocus = () => {
-          loadFromGoogleDrive(accessToken, true);
-        };
-
-        window.addEventListener('focus', handleFocus);
-        document.addEventListener('visibilitychange', handleFocus);
-
-        const intervalId = setInterval(() => {
-          loadFromGoogleDrive(accessToken, true);
-        }, 20000);
-
-        return () => {
-          window.removeEventListener('focus', handleFocus);
-          document.removeEventListener('visibilitychange', handleFocus);
-          clearInterval(intervalId);
-        };
-      }, [accessToken, loadFromGoogleDrive]);
-
       const handleGoogleLogin = () => {
         if (!clientId.trim()) {
           alert('Будь ласка, вкажіть ваш Google OAuth Client ID у Налаштуваннях!');
@@ -526,7 +529,7 @@
           callback: async (response) => {
             if (response.access_token) {
               setAccessToken(response.access_token);
-              ('app_google_token', response.access_token);
+              localStorage.setItem('app_google_token', response.access_token);
               await loadFromGoogleDrive(response.access_token);
             } else {
               setSyncStatus('Помилка входу');
@@ -550,7 +553,6 @@
         setSelectedOrderIds([]);
       }, [activeTab, showArchive]);
 
-      // ВИПРАВЛЕНО: Збереження додаткової роботи з збереженням усіх існуючих полів (isArchived, createdAt)
       const handleSaveWork = (formData) => {
         let updatedWorks = [];
         if (formData.id) {
@@ -605,7 +607,6 @@
         }
       };
 
-      // ВИПРАВЛЕНО: Збереження замовлення матеріалів з збереженням усіх існуючих полів (isArchived, createdAt)
       const handleSaveOrder = (formData) => {
         let updatedOrders = [];
         if (formData.id) {
@@ -763,25 +764,13 @@
                 </div>
                 <div>
                   <h1 className="font-bold text-base leading-tight">{t.appTitle}</h1>
-                  {accessToken && (
-                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1 cursor-pointer" onClick={() => loadFromGoogleDrive(accessToken)}>
-                      <span className={isSyncing ? "animate-spin" : ""}>●</span> {syncStatus || 'Авто-синхронізація активна'}
-                    </span>
-                  )}
+                  <span className="text-[10px] text-green-500 font-medium flex items-center gap-1">
+                    ● Firebase Sync Active
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                {accessToken && (
-                  <button 
-                    onClick={() => loadFromGoogleDrive(accessToken)}
-                    className={`p-2 rounded-lg border border-gray-200 dark:border-darkborder hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-brand ${isSyncing ? 'animate-spin' : ''}`}
-                    title="Примусово оновити з Диска"
-                  >
-                    <Icons.Refresh />
-                  </button>
-                )}
-
                 <button 
                   onClick={() => setShowArchive(!showArchive)}
                   className={`p-2 rounded-lg border text-xs font-medium flex items-center gap-1 transition-colors ${
